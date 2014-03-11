@@ -4,3 +4,5 @@ wavebender/*
 graphs/*
 samples/*
 wavebender
+*.wav
+

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import freqtools
 import wavebender as wb
 import sys
 import matplotlib.pyplot as plot
@@ -7,10 +8,6 @@ from itertools import *
 from numpy import absolute
 
 debug = None
-
-#if sys.argv[1] == 'debug':
- ##   debug = "yes"
-
 
 def zeroes():
     """A generator which will return only zeroes.
@@ -21,9 +18,9 @@ def zeroes():
         yield 0
 
 class Voice:
-    """A collection of waves and other points to be written to file. 
+    """A collection of waves and other points which make a noise. 
     
-    Starts life as a 0 length collection of zeroes.  
+    Can be written to file.
     """
     points=zeroes() #Points is a generator, always.
 
@@ -75,9 +72,7 @@ class Voice:
     def merge(self,other):
         """Add a generator to this voice. 
 
-       This will add, for each sample, a value to the current value.
-        This might need to be adjusted first in future.
-        Also, let's see if we can pass a wave object rather than its attributes.
+        This will add, for each sample, a value to the current value.
 
         """
         if other.sample_rate != self.sample_rate:
@@ -91,14 +86,14 @@ class Voice:
 
         host_no_of_samples = int(round(self.time * self.sample_rate))
         other_no_of_samples = int(round(other_total_time * other.sample_rate))
-        other_no_of_prewait_samples = int(round(other.prewait * other.sample_rate))
+        other_no_of_pw_samples = int(round(other.prewait * other.sample_rate))
 
         #Print prewait
         for i in range( host_no_of_samples ):
-            if i > other_no_of_prewait_samples:
+            if i > other_no_of_pw_samples:
                 self.samples[i] = self.samples[i] + other.points.next()
         for j in range(host_no_of_samples, other_no_of_samples):
-            if j > other_no_of_prewait_samples:
+            if j > other_no_of_pw_samples:
                 self.samples.append(other.points.next())
 
         if other_total_time > self.time:
@@ -136,53 +131,39 @@ class Wave(Voice):
         if self.shape == 'white_noise':
             return wb.white_noise(self.amplitude)
 
-#teste=Voice()
+#General functions
+def freq_at_octave(freq_at_zero, target_octave):
+    """Used to facilitate frquency calculations at different octaves
+    
+    Given the frequency at octave 0, returns the frequency at 
+    target_octave.
+    """
+    target_frequency = 0
 
-out=Wave(41,17)
-A=Wave(9,3, prewait=1.3)
-B=Wave(38,3.7,prewait=1.9,shape='square')
-C=Wave(7,7,prewait=0.52, shape='white_noise')
-D=Wave(5663, 0.7, prewait=2.89, shape='square')
+    if target_octave<0:
+        b = (target_octave*-2)/2
+    else:
+        b = target_octave
 
-outList=[A,B,C,D]
 
-#teste.plot()
+    for a in range(0,b):
+        if target_octave>0:
+           target_frequency *=2
+        else:
+           target_frequency /=2
+    target_frequency = freq_at_zero
+    return target_frequency;
+
+out=Wave(410,17)
+A=Wave(415,6, prewait=1.3)
+B=Wave(412,7,prewait=4)
+C=Wave(400,7,prewait=0.52)
+D=Wave(2,4, prewait=9)
+E=Wave(807,5, prewait=10)
+
+outList=[A,B,C,D,E]
+
 for p in outList:
     out.merge(p)
 
 out.write_to_wav('wills.wav')
-out.plot_wave(2000)
-
-def oldWay():
-    sRate = 44000
-    sChannels = 2 
-    sAmp = 0.5 
-   
-    tune=[]
-    times=[0.6,0.2,0.4,0.4,0.4,0.4,1.2]
-    pitches=[440, 420, 440, 660, 550, 660, 880]
-    tune.append(times)
-    tune.append(pitches)
-    
-    totalTime=sum(times)
- 
-    for t in range(len(tune[0])):
-    
-        if t==0:
-            first_wave = Wave(tune[1][0], tune[0][0])
-            out = first_wave.samples
-        else:
-            next_wave = Wave(tune[1][t], tune[0][t])
-            out = chain(out, next_wave.samples)
-    
-    print out   
-
-    for o in out:
-        print o
-
-    #first_wave.plot()
-    
-    wb.write_wavefile("./2by440TestOut.wav", samples=out, nframes=sRate * totalTime, nchannels=sChannels, sampwidth=2, framerate=sRate)
-
-
-#oldWay()
