@@ -42,8 +42,10 @@ class Voice:
     def plot_wave(self, num_points=None, style='k.'):
         """Use matplotlib to plot a graph of the wave
 
-        Plots num_points points
-    
+        num_points: int
+            Number of samples to be plotted.
+        style: str
+            Point style - from http://matplotlib.org/api/pyplot_api.html
         """
         graph = plot.subplot(111)
         
@@ -58,8 +60,14 @@ class Voice:
             for i in range(len(self.samples)):
                 self.samples[i] = self.samples[i] / factor
 
-    def write_to_wav(self, name="Wavefile", location="." ):
-        """Write the voice to a .wav file"""
+    def write_to_wav(self, name="wavegen-voice.wav", location="." ):
+        """Write the voice to a .wav file
+
+        name: str
+            The name of the file to be written
+        location: path
+            Where the file should be written to. Default is current working dir.
+        """
         self.normalise()
         channels = ((self.samples,) for i in range(self.channels))
         samples = wb.compute_samples(channels, 
@@ -69,12 +77,35 @@ class Voice:
                          nframes=self.sample_rate*self.time, nchannels=self.channels, 
                          sampwidth=2, framerate=self.sample_rate)
 
-    def merge(self,other):
-        """Add a generator to this voice. 
+    def merge(self,other,operation="+"):
+        """Merge wave objects self and other.
 
         This will add, for each sample, a value to the current value.
+        
+        operation: string
+            Determines how the sample values for self aand other will be combined.
+            +   -- Sum the values
+            *   -- Multiply the values
+            avg -- Find the average of the values
+            %   -- Returns self % other 
+        """ 
 
-        """
+        def calculate(i,j,operation):
+            """Merge i and j according to operation, return a float.
+
+            operation: string
+                The operation to je performed on i and j. Determines the 
+                +   -- Sum i and j
+                *   -- Multiply i and j
+                avg -- Find the average of i and j
+            """
+            if operation == "+":
+                return i+j
+            if operation == "*":
+                return i*j   
+            if operation == "avg":
+                return (i+j)/2
+
         if other.sample_rate != self.sample_rate:
             print "Cannot merge two waves of different sample rates."
             print "Current rate: ", self.sample_rate
@@ -91,7 +122,7 @@ class Voice:
         #Print prewait
         for i in range( host_no_of_samples ):
             if i > other_no_of_pw_samples:
-                self.samples[i] = self.samples[i] + other.points.next()
+                self.samples[i] = calculate(self.samples[i],other.points.next(),operation)
         for j in range(host_no_of_samples, other_no_of_samples):
             if j > other_no_of_pw_samples:
                 self.samples.append(other.points.next())
@@ -119,6 +150,8 @@ class Wave(Voice):
         Voice.__init__(self) #Call __init__ of parent class so attributes get loaded
     
     def construct(self):
+        """Given a Wave object, produces a soundwave which can be written to file."""
+
         if self.shape == 'sine':
             return wb.sine_wave(self.frequency, 
                                 self.sample_rate, self.amplitude)
@@ -131,39 +164,34 @@ class Wave(Voice):
         if self.shape == 'white_noise':
             return wb.white_noise(self.amplitude)
 
-#General functions
-def freq_at_octave(freq_at_zero, target_octave):
-    """Used to facilitate frquency calculations at different octaves
-    
-    Given the frequency at octave 0, returns the frequency at 
-    target_octave.
-    """
-    target_frequency = 0
 
-    if target_octave<0:
-        b = (target_octave*-2)/2
-    else:
-        b = target_octave
+to_write=[]
 
+to_write.append(Wave(410,7))
+to_write.append(Wave(415,6, prewait=1.3))
+to_write.append(Wave(204,5,prewait=2))
+to_write.append(Wave(203,4,prewait=2.4))
 
-    for a in range(0,b):
-        if target_octave>0:
-           target_frequency *=2
-        else:
-           target_frequency /=2
-    target_frequency = freq_at_zero
-    return target_frequency;
+out = to_write[0]
 
-out=Wave(410,17)
-A=Wave(415,6, prewait=1.3)
-B=Wave(412,7,prewait=4)
-C=Wave(400,7,prewait=0.52)
-D=Wave(2,4, prewait=9)
-E=Wave(807,5, prewait=10)
+if len(to_write) > 0:
+    for p in to_write[1:]:
+       out.merge(p)
 
-outList=[A,B,C,D,E]
+out.write_to_wav('plusagain.wav')
 
-for p in outList:
-    out.merge(p)
+out = to_write[0]
 
-out.write_to_wav('wills.wav')
+if len(to_write) > 0:
+    for p in to_write[1:]:
+       out.merge(p, 'avg')
+
+out.write_to_wav('avgagain.wav')
+
+out = to_write[0]
+
+if len(to_write) > 0:
+    for p in to_write[1:]:
+       out.merge(p, '*')
+
+out.write_to_wav('multagain.wav')
