@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import freqtools
+import freqTools
 import wavebender as wb
 import sys
 import matplotlib.pyplot as plot
@@ -75,7 +75,7 @@ class Voice:
                          nframes=self.sample_rate*self.time, nchannels=self.channels, 
                          sampwidth=2, framerate=self.sample_rate)
 
-    def merge(self,other,operation="+"):
+    def merge(self,other,operation="+", norm=False):
         """Merge wave objects self and other.
 
         This will add, for each sample, a value to the current value.
@@ -85,7 +85,10 @@ class Voice:
             +   -- Sum the values
             *   -- Multiply the values
             avg -- Find the average of the values
-            %   -- Returns self % other 
+            %   -- Returns self % other
+
+        norm: bool
+            If true, normalise each wave after calculating it
         """ 
 
         def calculate(i,j,operation):
@@ -125,12 +128,23 @@ class Voice:
             if j > other_no_of_pw_samples:
                 self.samples.append(other.points.next())
 
+        if norm:
+            self.normalise()
+
         if other_total_time > self.time:
             self.time = other_total_time    
 
 class Wave(Voice):
     
-    def __init__(self, frequency, time, amplitude=0.5, channels=2, sample_rate=44000, prewait=0, postwait=0, shape='sine', phase=0):
+    def __init__(self,frequency,time,
+                 amplitude=0.5, 
+                 channels=2,
+                 sample_rate=44000,
+                 prewait=0, 
+                 postwait=0,
+                 shape='sine', 
+                 phase=0,
+                 norm=False):
         """Initialise properties of wave objects"""
 
         self.frequency = frequency
@@ -144,6 +158,7 @@ class Wave(Voice):
         self.shape = shape
         self.points = self.construct()
         self.phase = phase
+        self.norm = norm
         
         Voice.__init__(self) #Call __init__ of parent class so attributes get loaded
     
