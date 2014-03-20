@@ -75,7 +75,7 @@ class Voice:
                          nframes=self.sample_rate*self.time, nchannels=self.channels, 
                          sampwidth=2, framerate=self.sample_rate)
 
-    def merge(self,other,operation="+", norm=False):
+    def merge(waves,operation="+", norm=False):
         """Merge wave objects self and other.
 
         This will add, for each sample, a value to the current value.
@@ -97,16 +97,41 @@ class Voice:
             operation: string
                 The operation to je performed on i and j. Determines the 
                 +   -- Sum i and j
-#                *   -- Multiply i and j
-#                avg -- Find the average of i and j
-#            """
-#            if operation == "+":
-#                return i+j
-#            if operation == "*":
-#                return i*j   
-#            if operation == "avg":
-#                return (i+j)/2
-#
+                *   -- Multiply i and j
+                avg -- Find the average of i and j
+            """
+            if operation == "+":
+                return i+j
+            if operation == "*":
+                return i*j   
+            if operation == "avg":
+                return (i+j)/2
+        
+        def merged_points(waves, operation, norm=False):
+            """Given a list of wave objects, return a points generator
+
+            waves: List of Waves
+                The objects to be combined
+
+            e.g wave.points=merged_points([wave1,wave2],"+")
+            """
+            seed = waves[0].points.next()
+            for wave in waves[1:]:
+                end_sample = wave.points.next()
+            yield end_sample
+    
+    out_wave=Wave(0,0)
+
+    #Check waves are all of the same sample rate:
+    model_sample_rate = waves[0].sample_rate
+    for wave in waves:
+        if wave.sample_wave != model_sample_rate:
+            print "At least two waves merged have differeng sample rates," + \
+                  "making a merge impossible. Please correct this."
+            sys.exit(1)
+
+    out_wave.points=merged_points(waves, operation, norm)
+
 #        if other.sample_rate != self.sample_rate:
 #            print "Cannot merge two waves of different sample rates."
 #            print "Current rate: ", self.sample_rate
@@ -126,7 +151,7 @@ class Voice:
 #            self.normalise()
 #
 #        if other_total_time > self.time:
-            self.time = other_total_time    
+#            self.time = other_total_time    
 
 class Wave(Voice):    
 
@@ -179,14 +204,12 @@ class Wave(Voice):
 
         i=-1 #A counter to keep position in the waveform. 
         before_postwait = self.total_ticks - self.postwait 
-        print "self.prewait = ", self.prewait
-
-        print "before postwait: ", before_postwait
 
         while True:
             
             i+=1
-            cursor = i % self.total_ticks
+            cursor = i % self.total_ticks 
+            #Cursor here represents the position in the waveform
             
             if cursor <= self.prewait:
                 yield 0
@@ -194,6 +217,3 @@ class Wave(Voice):
                 yield waveform.next()
             else:
                 yield 0
-
-
-
