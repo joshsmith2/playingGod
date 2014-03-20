@@ -97,45 +97,39 @@ class Voice:
             operation: string
                 The operation to je performed on i and j. Determines the 
                 +   -- Sum i and j
-                *   -- Multiply i and j
-                avg -- Find the average of i and j
-            """
-            if operation == "+":
-                return i+j
-            if operation == "*":
-                return i*j   
-            if operation == "avg":
-                return (i+j)/2
-
-        if other.sample_rate != self.sample_rate:
-            print "Cannot merge two waves of different sample rates."
-            print "Current rate: ", self.sample_rate
-            print "New rate: ", other.sample_rate
-            sys.exit(1)
-
-
-        other_total_time = other.time + other.prewait
-
-        host_no_of_samples = int(round(self.time * self.sample_rate))
-        other_no_of_samples = int(round(other_total_time * other.sample_rate))
-        other_no_of_pw_samples = int(round(other.prewait * other.sample_rate))
-
-        #Print prewait
-        for i in range( host_no_of_samples ):
-            if i > other_no_of_pw_samples:
-                self.samples[i] = calculate(self.samples[i],other.points.next(),operation)
-        for j in range(host_no_of_samples, other_no_of_samples):
-            if j > other_no_of_pw_samples:
-                self.samples.append(other.points.next())
-
-        if norm:
-            self.normalise()
-
-        if other_total_time > self.time:
+#                *   -- Multiply i and j
+#                avg -- Find the average of i and j
+#            """
+#            if operation == "+":
+#                return i+j
+#            if operation == "*":
+#                return i*j   
+#            if operation == "avg":
+#                return (i+j)/2
+#
+#        if other.sample_rate != self.sample_rate:
+#            print "Cannot merge two waves of different sample rates."
+#            print "Current rate: ", self.sample_rate
+#            print "New rate: ", other.sample_rate
+#            sys.exit(1)
+#
+#
+#        #Print prewait
+#        for i in range( host_no_of_samples ):
+#            if i > other.prewait:
+#                self.samples[i] = calculate(self.samples[i],other.points.next(),operation)
+#        for j in range(host_no_of_samples, other_no_of_samples):
+#            if j > other.prewait:
+#                self.samples.append(other.points.next())
+#
+#        if norm:
+#            self.normalise()
+#
+#        if other_total_time > self.time:
             self.time = other_total_time    
 
-class Wave(Voice):
-    
+class Wave(Voice):    
+
     def __init__(self,frequency,time,
                  amplitude=0.5, 
                  channels=2,
@@ -151,28 +145,55 @@ class Wave(Voice):
         self.prewait = prewait
         self.postwait = postwait
         self.time = time
-        self.total_time = time + prewait + postwait
+        self.sample_rate = sample_rate
+        self.total_ticks = (self.sample_rate * time) + prewait + postwait
         self.amplitude = amplitude
         self.channels = channels
-        self.sample_rate = sample_rate
         self.shape = shape
         self.points = self.construct()
         self.phase = phase
         self.norm = norm
         
         Voice.__init__(self) #Call __init__ of parent class so attributes get loaded
-    
+ 
     def construct(self):
-        """Given a Wave object, produces a soundwave which can be written to file."""
+        """Given a Wave object, produces a soundwave which can be written to file.
+
+        Internal vars:
+            waveform - the 'meat' of the wave, containing the sound rather than 0s for pre/postwait.
+        """
+
+        print "self.total_ticks: ", self.total_ticks
 
         if self.shape == 'sine':
-            return wb.sine_wave(self.frequency, 
+            waveform =  wb.sine_wave(self.frequency, 
                                 self.sample_rate, self.amplitude)
         if self.shape == 'square':
-            return wb.square_wave(self.frequency,
+            waveform = wb.square_wave(self.frequency,
                                   self.sample_rate, self.amplitude)
         if self.shape == 'damped':
-            return wb.damped_wave(self.frequency,
+            waveform = wb.damped_wave(self.frequency,
                                   self.sample_rate, self.amplitude)
         if self.shape == 'white_noise':
-            return wb.white_noise(self.amplitude)
+            waveform  = wb.white_noise(self.amplitude)
+
+        i=-1 #A counter to keep position in the waveform. 
+        before_postwait = self.total_ticks - self.postwait 
+        print "self.prewait = ", self.prewait
+
+        print "before postwait: ", before_postwait
+
+        while True:
+            
+            i+=1
+            cursor = i % self.total_ticks
+            
+            if cursor <= self.prewait:
+                yield 0
+            elif self.prewait < cursor <= before_postwait:
+                yield waveform.next()
+            else:
+                yield 0
+
+
+
