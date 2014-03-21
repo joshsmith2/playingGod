@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import freqTools
+#import freqTools
 import wavebender as wb
 import sys
 import matplotlib.pyplot as plot
@@ -15,29 +15,60 @@ def zeroes():
     while True: 
         yield 0
 
+def calculate(i,j,operation):
+    """Merge i and j according to operation, return a float.
+
+    operation: string
+        The operation to je performed on i and j. Determines the 
+        +   -- Sum i and j
+        *   -- Multiply i and j
+        avg -- Find the average of i and j
+    """
+    if operation == "+":
+        return i+j
+    if operation == "*":
+        return i*j   
+    if operation == "avg":
+        return (i+j)/2
+
+def merge(voices,operation="+",norm=False):
+    """Merge a couple of voices or waves together. Outputs a new voice."""
+    
+    def points_generator():
+        """Returns a generator repesenting voices combined using operation.
+        """
+        sample = voices[0].points.next()
+        for voice in voices[1:]:
+            sample = calculate(sample,voice.points.next(),operation)
+        yield sample
+
+    #Check voices are all of the same sample rate:
+    model_sample_rate = voices[0].sample_rate
+    for voice in voices:
+        if voice.sample_rate != model_sample_rate:
+            print "At least two waves merged have differeng sample rates," + \
+                  "making a merge impossible. Please correct this."
+            sys.exit(1)
+
+    out_voice=Voice()
+    out_voice.points=points_generator()
+    return out_voice
+
 class Voice:
     """A collection of waves and other points which make a noise. 
     
     Can be written to file.
     """
-    points=zeroes() #Points is a generator, always.
-
-    def __init__(self, sample_rate=44000, time=1):
-
-        try:
-            self.time 
-        except:
-            self.time = time
+    def __init__(self, sample_rate=44000):
 
         try:
             self.sample_rate
         except:
             self.sample_rate = sample_rate
+        self.points=zeroes()
 
-        no_of_samples = int(round(self.sample_rate * self.time))
-        self.samples = [next(self.points) for i in range(no_of_samples)] 
 
-    def plot_wave(self, num_points=None, style='k.'):
+    def plot_wave(self, num_points=1000, style='k.'):
         """Use matplotlib to plot a graph of the wave
 
         num_points: int
@@ -48,7 +79,7 @@ class Voice:
         graph = plot.subplot(111)
         
         for i in range(num_points):
-            graph.plot(i, self.samples[i], style)
+            graph.plot(i, self.points.next(), style)
         plot.show()
 
     def normalise(self):
@@ -58,7 +89,7 @@ class Voice:
             for i in range(len(self.samples)):
                 self.samples[i] = self.samples[i] / factor
 
-    def write_to_wav(self, name="wavegen-voice.wav", location="." ):
+    def write_to_wav(self, name="wavegen-voice.wav", length=1, location="."):
         """Write the voice to a .wav file
 
         name: str
@@ -66,16 +97,21 @@ class Voice:
         location: path
             Where the file should be written to. Default is current working dir.
         """
+        #Generate a finite list of samples from our points generator
+        self.samples = []
+        for tick in range(length * self.sample_rate):
+            self.samples.append(self.points.next())
+
         self.normalise()
         channels = ((self.samples,) for i in range(self.channels))
-        samples = wb.compute_samples(channels, 
-                                         self.sample_rate * self.time)
+        computed_samples = wb.compute_samples(channels, 
+                                              self.sample_rate * self.time)
 
-        wb.write_wavefile(name, samples=samples, 
-                         nframes=self.sample_rate*self.time, nchannels=self.channels, 
+        wb.write_wavefile(name, samples=computed_samples, 
+                         nframes=self.sample_rate*length, nchannels=self.channels, 
                          sampwidth=2, framerate=self.sample_rate)
 
-    def merge(waves,operation="+", norm=False):
+#    def merge(waves,operation="+", norm=False):
         """Merge wave objects self and other.
 
         This will add, for each sample, a value to the current value.
@@ -91,46 +127,6 @@ class Voice:
             If true, normalise each wave after calculating it
         """ 
 
-        def calculate(i,j,operation):
-            """Merge i and j according to operation, return a float.
-
-            operation: string
-                The operation to je performed on i and j. Determines the 
-                +   -- Sum i and j
-                *   -- Multiply i and j
-                avg -- Find the average of i and j
-            """
-            if operation == "+":
-                return i+j
-            if operation == "*":
-                return i*j   
-            if operation == "avg":
-                return (i+j)/2
-        
-        def merged_points(waves, operation, norm=False):
-            """Given a list of wave objects, return a points generator
-
-            waves: List of Waves
-                The objects to be combined
-
-            e.g wave.points=merged_points([wave1,wave2],"+")
-            """
-            seed = waves[0].points.next()
-            for wave in waves[1:]:
-                end_sample = wave.points.next()
-            yield end_sample
-    
-    out_wave=Wave(0,0)
-
-    #Check waves are all of the same sample rate:
-    model_sample_rate = waves[0].sample_rate
-    for wave in waves:
-        if wave.sample_wave != model_sample_rate:
-            print "At least two waves merged have differeng sample rates," + \
-                  "making a merge impossible. Please correct this."
-            sys.exit(1)
-
-    out_wave.points=merged_points(waves, operation, norm)
 
 #        if other.sample_rate != self.sample_rate:
 #            print "Cannot merge two waves of different sample rates."
@@ -217,3 +213,5 @@ class Wave(Voice):
                 yield waveform.next()
             else:
                 yield 0
+
+
