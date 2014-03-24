@@ -6,6 +6,7 @@ import sys
 import matplotlib.pyplot as plot
 from itertools import *
 from numpy import absolute
+from random import randrange
 
 def zeroes():
     """A generator which will return only zeroes.
@@ -32,15 +33,28 @@ def calculate(i,j,operation):
         return (i+j)/2
 
 def merge(voices,operation="+",norm=False):
-    """Merge a couple of voices or waves together. Outputs a new voice."""
+    """Merge a list  of voices or waves together. Outputs a new voice.
     
+    operation: string
+        Determines how the sample values for the waves will be combined.
+        +   -- Return waves[0] + waves[1] + ...
+        *   -- Return  waves[0] * waves[1] * ...
+        avg -- Return the average of waves[0], waves[1]
+
+    norm: bool
+        If true, normalise each wave after calculating it
+    """ 
+     
     def points_generator():
         """Returns a generator repesenting voices combined using operation.
         """
+    
         sample = voices[0].points.next()
         for voice in voices[1:]:
             sample = calculate(sample,voice.points.next(),operation)
         yield sample
+
+    out_voice=Voice()
 
     #Check voices are all of the same sample rate:
     model_sample_rate = voices[0].sample_rate
@@ -49,9 +63,11 @@ def merge(voices,operation="+",norm=False):
             print "At least two waves merged have differeng sample rates," + \
                   "making a merge impossible. Please correct this."
             sys.exit(1)
+        else:
+            out_voice.waves.append(voice)
 
-    out_voice=Voice()
-    out_voice.points=points_generator()
+    out_voice.points=points_generator
+
     return out_voice
 
 class Voice:
@@ -59,14 +75,12 @@ class Voice:
     
     Can be written to file.
     """
-    def __init__(self, sample_rate=44000):
-
-        try:
-            self.sample_rate
-        except:
-            self.sample_rate = sample_rate
+    def __init__(self, sample_rate=44000, channels=2, generation=0):
+        self.sample_rate = sample_rate
         self.points=zeroes()
-
+        self.channels = channels
+        self.waves = []
+        self.generation = generation 
 
     def plot_wave(self, num_points=1000, style='k.'):
         """Use matplotlib to plot a graph of the wave
@@ -79,7 +93,7 @@ class Voice:
         graph = plot.subplot(111)
         
         for i in range(num_points):
-            graph.plot(i, self.points.next(), style)
+            graph.plot(i, self.points().next(), style)
         plot.show()
 
     def normalise(self):
@@ -98,62 +112,24 @@ class Voice:
             Where the file should be written to. Default is current working dir.
         """
         #Generate a finite list of samples from our points generator
+        no_of_samples = length * self.sample_rate
         self.samples = []
-        for tick in range(length * self.sample_rate):
-            self.samples.append(self.points.next())
+        for tick in range(no_of_samples):
+            self.samples.append(self.points().next())
 
         self.normalise()
         channels = ((self.samples,) for i in range(self.channels))
-        computed_samples = wb.compute_samples(channels, 
-                                              self.sample_rate * self.time)
+        computed_samples = wb.compute_samples(channels, no_of_samples)
 
         wb.write_wavefile(name, samples=computed_samples, 
-                         nframes=self.sample_rate*length, nchannels=self.channels, 
+                         nframes=no_of_samples, nchannels=self.channels, 
                          sampwidth=2, framerate=self.sample_rate)
 
-#    def merge(waves,operation="+", norm=False):
-        """Merge wave objects self and other.
-
-        This will add, for each sample, a value to the current value.
-        
-        operation: string
-            Determines how the sample values for self aand other will be combined.
-            +   -- Sum the values
-            *   -- Multiply the values
-            avg -- Find the average of the values
-            %   -- Returns self % other
-
-        norm: bool
-            If true, normalise each wave after calculating it
-        """ 
-
-
-#        if other.sample_rate != self.sample_rate:
-#            print "Cannot merge two waves of different sample rates."
-#            print "Current rate: ", self.sample_rate
-#            print "New rate: ", other.sample_rate
-#            sys.exit(1)
-#
-#
-#        #Print prewait
-#        for i in range( host_no_of_samples ):
-#            if i > other.prewait:
-#                self.samples[i] = calculate(self.samples[i],other.points.next(),operation)
-#        for j in range(host_no_of_samples, other_no_of_samples):
-#            if j > other.prewait:
-#                self.samples.append(other.points.next())
-#
-#        if norm:
-#            self.normalise()
-#
-#        if other_total_time > self.time:
-#            self.time = other_total_time    
 
 class Wave(Voice):    
 
     def __init__(self,frequency,time,
                  amplitude=0.5, 
-                 channels=2,
                  sample_rate=44000,
                  prewait=0, 
                  postwait=0,
@@ -162,29 +138,31 @@ class Wave(Voice):
                  norm=False):
         """Initialise properties of wave objects"""
 
+        Voice.__init__(self, sample_rate = sample_rate)
+        #Call __init__ of parent class so attributes get loaded
+
         self.frequency = frequency
         self.prewait = prewait
         self.postwait = postwait
         self.time = time
         self.sample_rate = sample_rate
-        self.total_ticks = (self.sample_rate * time) + prewait + postwait
+        self.total_ticks = (sample_rate * time) + prewait + postwait
         self.amplitude = amplitude
-        self.channels = channels
         self.shape = shape
-        self.points = self.construct()
         self.phase = phase
         self.norm = norm
+        self.waves = [self] #This may seem ludicrous but is needed when defining voices.
+        self.points = self.construct()
         
-        Voice.__init__(self) #Call __init__ of parent class so attributes get loaded
  
     def construct(self):
-        """Given a Wave object, produces a soundwave which can be written to file.
+        """Given a Wave object, produces a soundwave which can be written to
+           file.
 
         Internal vars:
-            waveform - the 'meat' of the wave, containing the sound rather than 0s for pre/postwait.
+            waveform - the 'meat' of the wave, containing the sound rather than
+            0s for pre/postwait.
         """
-
-        print "self.total_ticks: ", self.total_ticks
 
         if self.shape == 'sine':
             waveform =  wb.sine_wave(self.frequency, 
@@ -213,5 +191,4 @@ class Wave(Voice):
                 yield waveform.next()
             else:
                 yield 0
-
 

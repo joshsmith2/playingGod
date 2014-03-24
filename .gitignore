@@ -5,4 +5,4 @@ graphs/*
 samples/*
 wavebender
 *.wav
-
+*.pyc
