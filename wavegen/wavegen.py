@@ -7,6 +7,7 @@ import matplotlib.pyplot as plot
 from itertools import *
 from numpy import absolute
 from random import randrange
+from freqtools import *
 
 def zeroes():
     """A generator which will return only zeroes.
