@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+"""Used to generate waves, merge these into more complex voices, plot them and
+write them to .wav files."""
+
 #import freqTools
 import wavebender as wb
 import sys
@@ -7,7 +10,13 @@ import matplotlib.pyplot as plot
 from itertools import *
 from numpy import absolute
 from random import randrange
-from freqtools import *
+
+"""Globals"""
+global possible_operations #See calculate()
+possible_operations = ["+","*","avg"]
+
+global possible_shapes #See construct()
+possible_shapes = ['sine', 'square', 'damped', 'white_noise']
 
 def zeroes():
     """A generator which will return only zeroes.
@@ -26,12 +35,13 @@ def calculate(i,j,operation):
         *   -- Multiply i and j
         avg -- Find the average of i and j
     """
+
     if operation == "+":
         return i+j
     if operation == "*":
         return i*j   
     if operation == "avg":
-        return (i+j)/2
+        return (i+j)/2.0
 
 def merge(voices,operation="+",norm=False):
     """Merge a list  of voices or waves together. Outputs a new voice.
@@ -160,9 +170,16 @@ class Wave(Voice):
         """Given a Wave object, produces a soundwave which can be written to
            file.
 
+        Global vars:
+        
+        possible_shapes: List of strings
+            used to keep track of what kinds of waves can be constructed in a 
+            way which can be queried by other modules. 
+                   
         Internal vars:
-            waveform - the 'meat' of the wave, containing the sound rather than
-            0s for pre/postwait.
+        waveform:
+            The audible protion of the wave.
+        
         """
 
         if self.shape == 'sine':
