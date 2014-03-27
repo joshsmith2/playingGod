@@ -85,8 +85,23 @@ class Voice:
     """A collection of waves and other points which make a noise. 
     
     Can be written to file.
+   
+    sample_rate: int (Hz) - default: 44000
+        Determines how many times per second the wave will be sampled to
+        produce sound. 
+
+    channels: int - default 2
+        No of channels. Still not sure what this means but it's in wavebender.
+    
+    generation: int - default 0
+        Which generation of creatures this voice belongs to.
+
     """
-    def __init__(self, sample_rate=44000, channels=2, generation=0):
+    def __init__(self,
+                 sample_rate=44000, 
+                 channels=2, 
+                 generation=0):
+
         self.sample_rate = sample_rate
         self.points=zeroes()
         self.channels = channels
