@@ -151,7 +151,6 @@ class Voice:
                          nframes=no_of_samples, nchannels=self.channels, 
                          sampwidth=2, framerate=self.sample_rate)
 
-
 class Wave(Voice):    
 
     def __init__(self,frequency,time,
@@ -161,7 +160,8 @@ class Wave(Voice):
                  postwait=0,
                  shape='sine', 
                  phase=0,
-                 norm=False):
+                 norm=False,
+                 active=True):
         """Initialise properties of wave objects"""
 
         Voice.__init__(self, sample_rate = sample_rate)
@@ -177,9 +177,9 @@ class Wave(Voice):
         self.shape = shape
         self.phase = phase
         self.norm = norm
+        self.active = active        
         self.waves = [self] #This may seem ludicrous but is needed when defining voices.
         self.points = self.construct()
-        
  
     def construct(self):
         """Given a Wave object, produces a soundwave which can be written to

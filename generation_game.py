@@ -6,16 +6,67 @@ The tools to create and manipulate generations of Voices - soon, creatures."""
 
 from wavegen import *
 from freqtools import *
-from random import uniform, randint
+import random
 import os
+
+class Creature:
+    """An object which can be evolved. 
+
+    voice: Voice
+        The creature's voice
+    no_of_partners: int
+        How many other creatures this one mates with when it copulates.
+    x_points:
+        Number of crossover points to be used while copulating
+    """
+
+    def __init__(self, voice=Voice(), no_of_partners=1, x_points=1):
+        self.no_of_partners = no_of_partners
+        self.voice = voice
+        self.x_points = x_points
+
+    def copulate(self, others, 
+                 mut_rate=0.05, 
+                 attributes=['frequency','time','prewait','postwait'],
+                 ):
+        """Mixes the attributes of alpha with that of each voice in other.
+        Returns a new voice. 
+
+        alpha: Voice
+            The 'primary' voice. Its' 'number of partners' is         
+        others: list of Voices
+        """
+                
+
+
+
+def activate(waves, no_active):
+    """Given a list of waves, returns a list with exactly no_active of these
+       activated."""
+    try:
+        activate_these = random.sample(waves, no_active)
+    except ValueError as e:
+        print "Error: " + str(e) + "\n" +\
+              "Waves activated: " + str(no_active) + "\n" +\
+              "Waves in voices: " + str(len(waves)) + "\n" +\
+              "Activating them all"
+        activate_these = waves
+
+    for wave in waves:
+        if wave in activate_these:
+            wave.active = True
+        else:
+            wave.active = False
+
+    return waves
 
 def check_limits(name, value):
     """
     Given a variable and it's defined values in make_voice, will error if these
     values are outside the bounds set here.
     Note: 'None' means no limit."""
-    
-    limits = {'number_of_waves':(0, None),
+
+    limits = {'no_of_waves':(0, None),
               'wave_length':(0,None),
               'freq_range':(0,None),
               'amplitude':(0,1),
@@ -35,103 +86,143 @@ def check_limits(name, value):
                   ', '.join(possible_operations) + "."
 
     elif value < limits[name][0]:
-         print "You have tried to define a voice with a " + name + " of " +\
-               str(value) + ". " + name + " has a lower limit of " +\
-               str(limits[name][0]) + " and an upper limit of " +\
-               str(limits[name][1]) + "."
+         print "You have tried to define a voice with a " + name +\
+               " of " + str(value) + ". "+\
+               name + " has a lower limit of " + str(limits[name][0]) +\
+               " and an upper limit of " + str(limits[name][1]) + "."
 
     elif limits[name][1]:
          if value > limits[name][1]:
-             print "You have tried to define a voice with a " + name + " of " +\
-                   str(value) + ". " + name + " has a lower limit of " +\
-                   str(limits[name][0]) + " and an upper limit of " +\
+             print "You have tried to define a voice with a " + name + " of "+\
+                   str(value) + ". " + name + " has a lower limit of "+\
+                   str(limits[name][0]) + " and an upper limit of "+\
                    str(limits[name][1]) + "."
 
-def make_voice(number_of_waves=(1,30), 
-               wave_length=(0,60), 
-               freq_range=(100,4000), 
-               amplitude=(0.1,0.9), 
+def make_voice(no_of_waves=30,
+               no_of_active_waves=None,
+               wave_length=(0,60),
+               freq_range=(100,4000),
+               amplitude=(0.1,0.9),
                prewait=(0,70000),
                postwait=(0,60000),
                shape="sine",
                operation="+",):
     """
-    Construct a Voice from a random number of waves, with various shapes, 
+    Construct a Voice from a random number of waves, with various shapes,
     frequencies and amplitudes, all within predefined boundaries.
- 
+
     Each argument is a tuple of minumum and maximum values. The resulting
-    voice's attributes will be a random value from this range. 
-    
-    Variables:
-    number_of_waves(min,max): tuple of ints
-         The number of waves to be merged into the voice
+    voice's attributes will be a random value from this range.
+
+    no_of_waves: int
+         The number of waves to be merged into the voice. Should be the same
+         across all voices in a generation.
+
+    no_of_active_waves: tuple of ints
+         The number of waves you will actually hear.
+
     wave_length(min,max): tuple of floats
          The duration of the audible portion of each wave
+
     freq_range(min,max): tuple of ints
          The minimum and maximum possible frequencies, in Hz, for each wave.
-    amplitude(min,max): 
+
+    amplitude(min,max):
          The amplitude of each wave
+
     prewait(min,max):
-         The number of ticks to wait before writing the audible part of the 
+         The number of ticks to wait before writing the audible part of the
          wave.
+
     postwait(min,max):
-         The number of ticks to wait after writing the audible part of the 
+         The number of ticks to wait after writing the audible part of the
          wave.
+
     shape: str
          The shape of each wave. A value from possible_shapes.
+
     operation: str
          The operation (e.g addition) with which to merge the waves together
     """
 
     """Write something to cycle through variables and check them against their
     defined vals"""
-    
+
+    #Define no of active waves if not done already.
+    if not no_of_active_waves:
+        no_of_active_waves = (0, no_of_waves)
+
     #Convert freq values to mils...
     mils_range=(freq_to_mils(freq_range[0]),freq_to_mils(freq_range[1]))
+
+    no_of_active_waves_out = random.randint(no_of_active_waves[0],
+                                            no_of_active_waves[1])
     
-    #Roll dice for values
-    number_of_waves_out = randint(number_of_waves[0], number_of_waves[1])
+    print no_of_active_waves_out, "active waves"
+
+    constituent_waves=[]
+
+    for n in range(no_of_waves):
     
-    constituent_waves=[]  
- 
-    for n in range(number_of_waves_out): 
-        wave_length_out = uniform(wave_length[0], wave_length[1])
-        amplitude_out = uniform(amplitude[0], amplitude[1])
-        prewait_out = randint(prewait[0], prewait[1])
-        postwait_out = randint(postwait[0], postwait[1])
-        
-        mils_out = randint(mils_range[0], mils_range[1])
+        #Generate definitive values for wave attributes
+        wave_length_out = random.uniform(wave_length[0], wave_length[1])
+        amplitude_out = random.uniform(amplitude[0], amplitude[1])
+        prewait_out = random.randint(prewait[0], prewait[1])
+        postwait_out = random.randint(postwait[0], postwait[1])
+        mils_out = random.randint(mils_range[0], mils_range[1])
         freq_out = mils_to_freq(mils_out)
 
         if shape == 'any':
-            shape_out = possible_shapes[randint(0,len(possible_shapes)-1)]
+            shape_out = possible_shapes[random.randint(0,len(possible_shapes)-1)]
         else:
             shape_out = shape
         if operation == 'any':
-            operation_out = possible_operations[randint(0,len(possible_operations)-1)]
+            operation_out = possible_operations[random.randint(0,len(possible_operations)-1)]
         else:
             operation_out = operation
-        
+    
         constituent_waves.append(Wave(freq_out,wave_length_out,amplitude_out,
                                       prewait=prewait_out,
                                       postwait=postwait_out,
-                                      shape=shape_out)) 
+                                      shape=shape_out))
 
-    return merge(constituent_waves)
+    active_waves = activate(constituent_waves, no_of_active_waves_out)
+    active_waves = [w for w in active_waves if w.active]
+    final_product = merge(active_waves)
+    final_product.waves = constituent_waves
+    return final_product
 
-def make_generation(age=0, number_of_voices=10):
-    for i in range(number_of_voices):
-        print "Building wave", i
+def make_generation(age=0,
+                    no_of_voices=10, 
+                    waves_per_voice=30, 
+                    wav_length=5):
+    
+    for i in range(no_of_voices):
+        print "Building voice", i
         sample_root = os.path.abspath("./samples")
         generation_folder = "Generation " + str(age)
         full_root = os.path.join(sample_root,generation_folder)
         if not os.path.exists(full_root):
             os.mkdir(full_root)
+
         out_path = os.path.join(full_root,"Voice "+ str(i)+".wav")
         shpl=possible_shapes.append("any")
-        shp=[randint(0,len(possible_shapes))]
+        shp=[random.randint(0,len(possible_shapes))]
         opl=possible_operations.append("any")
-        op=[randint(0,len(possible_operations))]
-        make_voice(number_of_waves=(3,20), wave_length=(0.1,10), operation=op).write_to_wav(out_path,length=20)
+        op=[random.randint(0,len(possible_operations))]
 
-make_generation(age=3, number_of_voices=10)
+        out_voice = make_voice(no_of_active_waves=(3,20),
+                               wave_length=(0.1,15),
+                               prewait=(0,66000), 
+                               postwait=(0,66000),
+                               operation=op,
+                               freq_range=(32,3000),)
+        out_voice.write_to_wav(out_path,length=wav_length)
+
+
+def main():
+    make_generation(13,3,20,10)
+
+if __name__=="__main__":
+    main()
+
