@@ -147,9 +147,12 @@ class Voice:
         channels = ((self.samples,) for i in range(self.channels))
         computed_samples = wb.compute_samples(channels, no_of_samples)
 
-        wb.write_wavefile(name, samples=computed_samples, 
-                         nframes=no_of_samples, nchannels=self.channels, 
-                         sampwidth=2, framerate=self.sample_rate)
+        wb.write_wavefile(name, 
+                          samples=computed_samples, 
+                          nframes=no_of_samples, 
+                          nchannels=self.channels, 
+                          sampwidth=2, 
+                          framerate=self.sample_rate)
 
 class Wave(Voice):    
 
@@ -163,7 +166,6 @@ class Wave(Voice):
                  norm=False,
                  active=True):
         """Initialise properties of wave objects"""
-
         Voice.__init__(self, sample_rate = sample_rate)
         #Call __init__ of parent class so attributes get loaded
 

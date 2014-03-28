@@ -9,6 +9,10 @@ from freqtools import *
 import random
 import os
 
+def to_gen(a_list):
+    """Converts a list to a generator"""
+    for i in     
+
 class Creature:
     """An object which can be evolved. 
 
@@ -23,9 +27,9 @@ class Creature:
     def __init__(self, voice=Voice(), no_of_partners=1, x_points=1):
         self.no_of_partners = no_of_partners
         self.voice = voice
-        self.x_points = x_points
+        self.no_of_x_points = x_points
 
-    def copulate(self, others, 
+    def copulate(self, voices_to_combine, 
                  mut_rate=0.05, 
                  attributes=['frequency','time','prewait','postwait'],
                  ):
@@ -36,7 +40,28 @@ class Creature:
             The 'primary' voice. Its' 'number of partners' is         
         others: list of Voices
         """
-                
+        self.x_points
+        voices_to_combine.append(self)
+        
+        #Pick crossover points
+        possible_points = len(waves_per_voice) * len(attributes)
+        x_points = random.sample(range(possible_points), no_of_x_points)
+    
+        point_index = 0
+        out_voice = Voice()
+        
+        #Choose the voices who will pass on their genes this time...
+        fertile_list = random.sample(voices_to_combine, no_of_x_points+1)
+        fertile_voices = iter(fertile_list)
+        #...and the one being written now.
+        dominant_voice=fertile_voices.next()
+
+        for wave in self.waves:
+            out_wave = Wave()
+            for attr in attributes:
+                if point_index in x_points:
+                    dominant_voice = fertile_voices.next()
+        
 
 
 
@@ -48,6 +73,7 @@ def activate(waves, no_active):
     except ValueError as e:
         print "Error: " + str(e) + "\n" +\
               "Waves activated: " + str(no_active) + "\n" +\
+
               "Waves in voices: " + str(len(waves)) + "\n" +\
               "Activating them all"
         activate_these = waves
@@ -197,7 +223,6 @@ def make_generation(age=0,
                     waves_per_voice=30, 
                     wav_length=5):
     
-    for i in range(no_of_voices):
         print "Building voice", i
         sample_root = os.path.abspath("./samples")
         generation_folder = "Generation " + str(age)
