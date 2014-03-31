@@ -7,9 +7,11 @@ write them to .wav files."""
 import wavebender as wb
 import sys
 import matplotlib.pyplot as plot
+import inspect 
 from itertools import *
 from numpy import absolute
 from random import randrange
+from pprint import pprint
 
 """Globals"""
 global possible_operations #See calculate()
@@ -17,6 +19,7 @@ possible_operations = ["+","*","avg"]
 
 global possible_shapes #See construct()
 possible_shapes = ['sine', 'square', 'damped', 'white_noise']
+
 
 def zeroes():
     """A generator which will return only zeroes.
@@ -154,6 +157,26 @@ class Voice:
                           sampwidth=2, 
                           framerate=self.sample_rate)
 
+
+    def variables(self):
+        """Returns the defined variables of an selfect wave as a dictionary
+        
+        Particularly designed for waves / voices."""
+        members = inspect.getmembers(self)
+        out_dict = {}
+        
+        for member in members:
+            m_name = member[0]
+            m_value = member[1]
+            if not '__' in m_name:
+                if not inspect.ismethod(m_value) and not inspect.isgenerator(m_value):
+                    if m_name != 'waves':
+                        out_dict[m_name] = m_value
+        return out_dict
+
+    def print_vars(self):
+        pprint(self.variables())
+
 class Wave(Voice):    
 
     def __init__(self,frequency,time,
@@ -226,4 +249,3 @@ class Wave(Voice):
                 yield waveform.next()
             else:
                 yield 0
-
