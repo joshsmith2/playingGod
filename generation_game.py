@@ -10,7 +10,7 @@ import random
 import os
 
 class Creature:
-    """An object which can be evolved. 
+    """An object which can be evolved.
 
     voice: Voice
         The creature's voice
@@ -25,16 +25,16 @@ class Creature:
         self.voice = voice
         self.no_of_x_points = x_points
 
-    def copulate(self, voices_to_combine, 
-                 mut_rate=0.05, 
+    def copulate(self, voices_to_combine,
+                 mut_rate=0.05,
                  attributes=['frequency','time','prewait','postwait'],
                  waves_per_voice=30,
                  ):
         """Mixes the attributes of alpha with that of each voice in other.
-        Returns a new voice. 
+        Returns a new voice.
 
         voices_to_combine: list of Voices
-            The pool from which to pick the partners. Should not contain self. 
+            The pool from which to pick the partners. Should not contain self.
         mut_rate: float
             The likelihood that a given value will mutate. Not used yet.
         attributes: list of str
@@ -43,16 +43,16 @@ class Creature:
         #Pick crossover points
         possible_points = waves_per_voice * len(attributes)
         x_points = random.sample(range(possible_points), self.no_of_x_points)
-    
+
         point_index = 0
-        
-        out = self    
+
+        out = self
 
         #Choose the voices who will pass on their genes this time...
         fertile_list = random.sample(voices_to_combine, self.no_of_partners)
         fertile_list.append(self)
         fertile_voices = [f.voice for f in fertile_list]
-        
+
         #...and the one to be written first.
         dominant_voice = random.sample(fertile_voices, 1)[0]
 
@@ -64,28 +64,9 @@ class Creature:
                     dominant_voice = random.sample(fertile_voices, 1)[0]
                 set_value = getattr(dominant_voice.waves[wave_index], attr)
                 setattr(out.voice.waves[wave_index], attr, set_value)
-        
+
         return out
 
-def activate(waves, no_active):
-    """Given a list of waves, returns a list with exactly no_active of these
-       activated."""
-    try:
-        activate_these = random.sample(waves, no_active)
-    except ValueError as e:
-        print "Error: " + str(e) + "\n" +\
-              "Waves activated: " + str(no_active) + "\n" +\
-              "Waves in voices: " + str(len(waves)) + "\n" +\
-              "Activating them all"
-        activate_these = waves
-
-    for wave in waves:
-        if wave in activate_these:
-            wave.active = True
-        else:
-            wave.active = False
-
-    return waves
 
 def check_limits(name, value):
     """
@@ -125,117 +106,17 @@ def check_limits(name, value):
                    str(limits[name][0]) + " and an upper limit of "+\
                    str(limits[name][1]) + "."
 
-def make_creature(no_of_waves=30,
-                  max_no_of_partners=(0,10),
-                  no_of_x_points=(0,100),
-                  no_of_active_waves=None,
-                  wave_length=(0,60),
-                  freq_range=(100,4000),
-                  amplitude=(0.1,0.9),
-                  prewait=(0,70000),
-                  postwait=(0,60000),
-                  shape="sine",
-                  operation="+",):
-    """
-    Construct a Voice from a random number of waves, with various shapes,
-    frequencies and amplitudes, all within predefined boundaries, and return a 
-    creature with this voice. 
-
-    Each argument is a tuple of minumum and maximum values. The resulting
-    voice's attributes will be a random value from this range.
-
-    no_of_waves: int
-         The number of waves to be merged into the voice. Should be the same
-         across all voices in a generation.
-
-    no_of_active_waves: tuple of ints
-         The number of waves you will actually hear.
-
-    wave_length(min,max): tuple of floats
-         The duration of the audible portion of each wave
-
-    freq_range(min,max): tuple of ints
-         The minimum and maximum possible frequencies, in Hz, for each wave.
-
-    amplitude(min,max):
-         The amplitude of each wave
-
-    prewait(min,max):
-         The number of ticks to wait before writing the audible part of the
-         wave.
-
-    postwait(min,max):
-         The number of ticks to wait after writing the audible part of the
-         wave.
-
-    shape: str
-         The shape of each wave. A value from possible_shapes.
-
-    operation: str
-         The operation (e.g addition) with which to merge the waves together
-    """
-
-    """Write something to cycle through variables and check them against their
-    defined vals"""
-
-    #Define no of active waves if not done already.
-    if not no_of_active_waves:
-        no_of_active_waves = (0, no_of_waves)
-
-
-    #Convert freq values to mils...
-    mils_range=(freq_to_mils(freq_range[0]),freq_to_mils(freq_range[1]))
-
-    no_of_active_waves_out = random.randint(no_of_active_waves[0],
-                                            no_of_active_waves[1])
-    
-    print no_of_active_waves_out, "active waves"
-
-    constituent_waves=[]
-
-    for n in range(no_of_waves):
-    
-        #Generate definitive values for wave attributes
-        max_no_of_partners_out = random.randint(max_no_of_partners[0], max_no_of_partners[1])
-        wave_length_out = random.uniform(wave_length[0], wave_length[1])
-        amplitude_out = random.uniform(amplitude[0], amplitude[1])
-        prewait_out = random.randint(prewait[0], prewait[1])
-        postwait_out = random.randint(postwait[0], postwait[1])
-        mils_out = random.randint(mils_range[0], mils_range[1])
-        freq_out = mils_to_freq(mils_out)
-
-        if shape == 'any':
-            shape_out = possible_shapes[random.randint(0,len(possible_shapes)-1)]
-        else:
-            shape_out = shape
-        if operation == 'any':
-            operation_out = possible_operations[random.randint(0,len(possible_operations)-1)]
-        else:
-            operation_out = operation
-    
-        constituent_waves.append(Wave(freq_out,wave_length_out,amplitude_out,
-                                      prewait=prewait_out,
-                                      postwait=postwait_out,
-                                      shape=shape_out))
-
-    active_waves = activate(constituent_waves, no_of_active_waves_out)
-    active_waves = [w for w in active_waves if w.active]
-    final_voice = merge(active_waves)
-    final_voice.waves = constituent_waves
-    
-    return Creature(final_voice, max_no_of_partners_out)
-
 def make_generation(age=0,
-                    no_of_creatures=10, 
-                    waves_per_voice=30, 
+                    no_of_creatures=10,
+                    waves_per_voice=30,
                     wav_length=5):
-        
+
     """Returns a list of creatures, each with its own voice."""
-    out_creature = Creature()        
+    out_creature = Creature()
     out_creatures = []
 
     for i in range(no_of_creatures):
-        
+
         out_creature = Creature()
 
         print "Building creature", i
@@ -249,7 +130,7 @@ def make_generation(age=0,
                                      no_of_x_points = (5,5),
                                      no_of_active_waves=(1,10),
                                      wave_length=(0.1,15),
-                                     prewait=(0,66000), 
+                                     prewait=(0,66000),
                                      postwait=(0,66000),
                                      operation=op,
                                      freq_range=(30,3300),)
@@ -268,18 +149,25 @@ def rubber_stamper(creatures, age=3):
             print "Attributes for wave ", c.voice.waves.index(w), ":"
             w.print_vars()
             print "\n"
-        
+
         sample_root = os.path.abspath("./samples")
-        generation_folder = "Creature generation " + str(age) 
+        generation_folder = "Creature generation " + str(age)
         full_root = os.path.join(sample_root,generation_folder)
 
         if not os.path.exists(full_root):
             os.mkdir(full_root)
 
         out_path = os.path.join(full_root,"Voice "+ str(index)+".wav")
-        
+
         print "Writing voice of creature ", index, "\n"
         c.voice.write_to_wav(out_path, length=10)
+
+class Generation:
+    def __init__(self,creatures, era, no_of_creatures):
+        self.era = era
+        self.creatures = []
+
+
 
 def main():
     creatures = make_generation(age=2,
@@ -293,7 +181,7 @@ def main():
     alpha = creatures[int(alpha_index)]
     other_creatures = creatures
     other_creatures.remove(alpha)
-   
+
     print other_creatures
     print alpha
 
@@ -303,10 +191,9 @@ def main():
     for w in child.voice.waves:
         print "vars for wave ", child.voice.waves.index(
         w.print_vars()
-        
+
     print "Writing child..."
     child.voice.write_to_wav("samples/Childred.wav", length=10)
 
 if __name__=="__main__":
     main()
-

@@ -10,8 +10,9 @@ import matplotlib.pyplot as plot
 import inspect 
 from itertools import *
 from numpy import absolute
-from random import randrange
+import random
 from pprint import pprint
+from freqtools import *
 
 """Globals"""
 global possible_operations #See calculate()
@@ -47,7 +48,7 @@ def calculate(i,j,operation):
         return (i+j)/2.0
 
 def merge(voices,operation="+",norm=False):
-    """Merge a list  of voices or waves together. Outputs a new voice.
+    """Merge a list  of voices or waves together. Outputs a generator used for voice.points
     
     operation: string
         Determines how the sample values for the waves will be combined.
@@ -74,15 +75,13 @@ def merge(voices,operation="+",norm=False):
     model_sample_rate = voices[0].sample_rate
     for voice in voices:
         if voice.sample_rate != model_sample_rate:
-            print "At least two waves merged have differeng sample rates," + \
+            print "At least two waves merged have differing sample rates," + \
                   "making a merge impossible. Please correct this."
             sys.exit(1)
         else:
             out_voice.waves.append(voice)
 
-    out_voice.points=points_generator
-
-    return out_voice
+    return points_generator
 
 class Voice:
     """A collection of waves and other points which make a noise. 
@@ -99,18 +98,135 @@ class Voice:
     generation: int - default 0
         Which generation of creatures this voice belongs to.
 
+    no_of_waves: int
+         The number of waves to be merged into the voice. Should be the same
+         across all voices in a generation.
+
     """
     def __init__(self,
                  sample_rate=44000, 
                  channels=2, 
-                 generation=0):
+                 generation=0,
+                 no_of_waves=30,
+                 no_of_active_waves=10):
 
         self.sample_rate = sample_rate
         self.points=zeroes()
         self.channels = channels
         self.waves = []
         self.generation = generation 
+        self.no_of_waves = no_of_waves
+        self.no_of_active_waves = no_of_active_waves
 
+
+    def activate_waves(self):
+        """Change the 'active' attribute of a random selection of waves in
+        self.waves, so that no_active are active."""
+        try:
+            activate_these = random.sample(self.waves, self.no_of_active_waves)
+        
+        except ValueError as e:
+            print "Error: " + str(e) + "\n" +\
+                  "Waves activated: " + str(self.no_of_active_waves) + "\n" +\
+                  "Waves in voices: " + str(len(self.waves)) + "\n" +\
+                  "Activating them all"
+            activate_these = self.waves
+
+        for wave in self.waves:
+            if wave in activate_these:
+                wave.active = True
+            else:
+                wave.active = False
+
+    def give_tongue(self, 
+                    active_waves_range=None, 
+                    wave_length_range=(0,60),
+                    freq_range=(30,4000),
+                    amp_range=(0.01,0.99),
+                    prewait_range=(0,88000),
+                    postwait_range=(0,88000),
+                    shape='sine',
+                    operation='any'): 
+        """
+        
+        Construct a Voice from a random number of waves, with various shapes,
+        frequencies and amplitudes, all within predefined boundaries, and return a
+        creature with this voice.
+
+        Each argument is a tuple of minumum and maximum values. The resulting
+        voice's attributes will be a random value from this range.
+        
+        active_waves_range: tuple of ints
+             The number of waves you will actually hear.
+
+        wave_length_range(min,max): tuple of floats
+             The duration of the audible portion of each wave
+
+        freq_range(min,max): tuple of ints
+             The minimum and maximum possible frequencies, in Hz, for each wave.
+        
+        amp_range(min,max):
+             The amplitude of each wave
+
+        prewait_range(min,max):
+             The number of ticks to wait before writing the audible part of the
+             wave.
+
+        postwait_range(min,max):
+             The number of ticks to wait after writing the audible part of the
+             wave.
+
+        shape: str
+             The shape of each wave. A value from possible_shapes, or any
+             to have a random shape rolled for each wave.
+
+        operation: str
+             The operation (e.g addition) with which to merge the waves together
+        """
+
+        if not active_waves_range:
+            active_waves_range = (0, self.no_of_waves)
+
+        #Convert freq values to mils
+        mils_range=(freq_to_mils(freq_range[0]),freq_to_mils(freq_range[1]))
+
+        #Start to genertate values from the supplied ranges. 
+        no_of_active_waves = random.randint(active_waves_range[0],
+                                            active_waves_range[1])
+
+        constituent_waves=[]
+
+        for n in range(self.no_of_waves):
+
+            #Generate definitive values for wave attributes
+            wave_length = random.uniform(wave_length_range[0], wave_length_range[1])
+            amplitude = random.uniform(amp_range[0], amp_range[1])
+            prewait = random.randint(prewait_range[0], prewait_range[1])
+            postwait = random.randint(postwait_range[0], postwait_range[1])
+            mils = random.randint(mils_range[0], mils_range[1])
+            frequency = mils_to_freq(mils)
+
+            if shape == 'any':
+                wave_shape = random.sample(possible_shapes,1)[0]
+            else:
+                wave_shape = shape
+            
+            if operation == 'any':
+                operation = random.sample(possible_operations,1)[0]
+
+            constituent_waves.append(Wave(frequency,
+                                          wave_length,
+                                          amplitude,
+                                          prewait=prewait,
+                                          postwait=postwait,
+                                          shape=wave_shape,)
+                                    )
+
+        self.waves = constituent_waves
+        self.activate_waves()
+        active_waves = [w for w in self.waves if w.active]
+        self.points = merge(self.active, operation)
+            
     def plot_wave(self, num_points=1000, style='k.'):
         """Use matplotlib to plot a graph of the wave
 
