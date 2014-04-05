@@ -16,7 +16,7 @@ from freqtools import *
 
 """Globals"""
 global possible_operations #See calculate()
-possible_operations = ["+","*","avg","exp1","exp2"]
+possible_operations = ["+","*","avg"]
 
 global possible_shapes #See construct()
 possible_shapes = ['sine', 'square', 'damped', 'white_noise']
@@ -34,7 +34,7 @@ def calculate(i,j,operation):
     """Merge i and j according to operation, return a float.
 
     operation: string
-        The operation to je performed on i and j. Determines the 
+        The operation to be performed on i and j. Determines the 
         +   -- Sum i and j
         *   -- Multiply i and j
         avg -- Find the average of i and j
@@ -68,7 +68,7 @@ def merge(voices,operation="+",norm=False):
     """ 
      
     def points_generator():
-        """Returns a generator repesenting voices combined using operation.
+        """Returns a generator representing voices combined using operation.
         """
     
         sample = voices[0].points.next()
@@ -152,8 +152,8 @@ class Voice:
                    amp_range=(0.01,0.99),
                    prewait_range=(0,88000),
                    postwait_range=(0,88000),
-                   shape='any',
-                   operation='any'): 
+                   shape='sine',
+                   operation='+'): 
         """
         
         Construct a Voice from a random number of waves, with various shapes,
@@ -206,7 +206,7 @@ class Voice:
         for n in range(self.no_of_waves):
 
             #Generate definitive values for wave attributes
-            wave_length = random.uniform(length_range[0], length_range[1])
+            length = random.uniform(length_range[0], length_range[1])
             amplitude = random.uniform(amp_range[0], amp_range[1])
             prewait = random.randint(prewait_range[0], prewait_range[1])
             postwait = random.randint(postwait_range[0], postwait_range[1])
@@ -221,14 +221,14 @@ class Voice:
                                           amplitude,
                                           prewait=prewait,
                                           postwait=postwait,
-                                          shape=wave_shape,)
+                                          shape=shape,)
                                          )
 
         self.waves = constituent_waves
         self.activate_waves()
         active_waves = [w for w in self.waves if w.active]
         self.points = merge(active_waves, operation)
-            
+
     def plot_wave(self, num_points=1000, style='k.'):
         """Use matplotlib to plot a graph of the wave
 
@@ -245,7 +245,9 @@ class Voice:
 
     def normalise(self):
         """Bring values of self.samples back between 1 and -1"""
+        
         factor = max(absolute(self.samples))
+
         if factor != 1:
             for i in range(len(self.samples)):
                 self.samples[i] = self.samples[i] / factor
@@ -261,8 +263,10 @@ class Voice:
         #Generate a finite list of samples from our points generator
         no_of_samples = length * self.sample_rate
         self.samples = []
+        
         for tick in range(no_of_samples):
             self.samples.append(self.points().next())
+        
 
         self.normalise()
         channels = ((self.samples,) for i in range(self.channels))
@@ -323,7 +327,7 @@ class Wave(Voice):
         self.waves = [self] #This may seem ludicrous but is needed when defining voices.
         self.points = self.construct()
         if shape == 'any':
-            self.shape = random.sample(possible_shapes, 1)
+            self.shape = random.sample(possible_shapes, 1)[0]
         else:
             self.shape = shape
 
