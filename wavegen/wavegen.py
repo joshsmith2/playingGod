@@ -16,7 +16,7 @@ from freqtools import *
 
 """Globals"""
 global possible_operations #See calculate()
-possible_operations = ["+","*","avg"]
+possible_operations = ["+","*","avg","exp1","exp2"]
 
 global possible_shapes #See construct()
 possible_shapes = ['sine', 'square', 'damped', 'white_noise']
@@ -42,9 +42,16 @@ def calculate(i,j,operation):
 
     if operation == "+":
         return i+j
-    if operation == "*":
-        return i*j   
-    if operation == "avg":
+    elif operation == "*":
+        if i == 0:
+            out = j
+        elif j == 0:
+            out = i
+        else:
+            out = i*j   
+        return out
+             
+    elif operation == "avg":
         return (i+j)/2.0
 
 def merge(voices,operation="+",norm=False):
@@ -138,15 +145,15 @@ class Voice:
             else:
                 wave.active = False
 
-    def give_tongue(self, 
-                    active_waves_range=None, 
-                    wave_length_range=(0,60),
-                    freq_range=(30,4000),
-                    amp_range=(0.01,0.99),
-                    prewait_range=(0,88000),
-                    postwait_range=(0,88000),
-                    shape='sine',
-                    operation='any'): 
+    def make_voice(self, 
+                   active_waves_range=None, 
+                   length_range=(0,60),
+                   freq_range=(30,4000),
+                   amp_range=(0.01,0.99),
+                   prewait_range=(0,88000),
+                   postwait_range=(0,88000),
+                   shape='any',
+                   operation='any'): 
         """
         
         Construct a Voice from a random number of waves, with various shapes,
@@ -159,7 +166,7 @@ class Voice:
         active_waves_range: tuple of ints
              The number of waves you will actually hear.
 
-        wave_length_range(min,max): tuple of floats
+        length_range(min,max): tuple of floats
              The duration of the audible portion of each wave
 
         freq_range(min,max): tuple of ints
@@ -199,33 +206,28 @@ class Voice:
         for n in range(self.no_of_waves):
 
             #Generate definitive values for wave attributes
-            wave_length = random.uniform(wave_length_range[0], wave_length_range[1])
+            wave_length = random.uniform(length_range[0], length_range[1])
             amplitude = random.uniform(amp_range[0], amp_range[1])
             prewait = random.randint(prewait_range[0], prewait_range[1])
             postwait = random.randint(postwait_range[0], postwait_range[1])
             mils = random.randint(mils_range[0], mils_range[1])
             frequency = mils_to_freq(mils)
 
-            if shape == 'any':
-                wave_shape = random.sample(possible_shapes,1)[0]
-            else:
-                wave_shape = shape
-            
             if operation == 'any':
                 operation = random.sample(possible_operations,1)[0]
 
             constituent_waves.append(Wave(frequency,
-                                          wave_length,
+                                          length,
                                           amplitude,
                                           prewait=prewait,
                                           postwait=postwait,
                                           shape=wave_shape,)
-                                    )
+                                         )
 
         self.waves = constituent_waves
         self.activate_waves()
         active_waves = [w for w in self.waves if w.active]
-        self.points = merge(self.active, operation)
+        self.points = merge(active_waves, operation)
             
     def plot_wave(self, num_points=1000, style='k.'):
         """Use matplotlib to plot a graph of the wave
@@ -315,13 +317,16 @@ class Wave(Voice):
         self.sample_rate = sample_rate
         self.total_ticks = (sample_rate * time) + prewait + postwait
         self.amplitude = amplitude
-        self.shape = shape
         self.phase = phase
         self.norm = norm
         self.active = active        
         self.waves = [self] #This may seem ludicrous but is needed when defining voices.
         self.points = self.construct()
- 
+        if shape == 'any':
+            self.shape = random.sample(possible_shapes, 1)
+        else:
+            self.shape = shape
+
     def construct(self):
         """Given a Wave object, produces a soundwave which can be written to
            file.

@@ -25,6 +25,13 @@ class Creature:
         self.voice = voice
         self.no_of_x_points = x_points
 
+    def make_creature(self,
+                      max_no_of_partners = (1,30)
+                      no_of_x_points = None        
+                      ):
+        """Constructs a creature with attributes randomly chosen from 
+        the ranges passed"""
+
     def copulate(self, voices_to_combine,
                  mut_rate=0.05,
                  attributes=['frequency','time','prewait','postwait'],
@@ -106,43 +113,11 @@ def check_limits(name, value):
                    str(limits[name][0]) + " and an upper limit of "+\
                    str(limits[name][1]) + "."
 
-def make_generation(age=0,
-                    no_of_creatures=10,
-                    waves_per_voice=30,
-                    wav_length=5):
-
-    """Returns a list of creatures, each with its own voice."""
-    out_creature = Creature()
-    out_creatures = []
-
-    for i in range(no_of_creatures):
-
-        out_creature = Creature()
-
-        print "Building creature", i
-
-        shpl=possible_shapes.append("any")
-        shp=[random.randint(0,len(possible_shapes))]
-        opl=possible_operations.append("any")
-        op=[random.randint(0,len(possible_operations))]
-
-        out_creature = make_creature(max_no_of_partners = (1,2),
-                                     no_of_x_points = (5,5),
-                                     no_of_active_waves=(1,10),
-                                     wave_length=(0.1,15),
-                                     prewait=(0,66000),
-                                     postwait=(0,66000),
-                                     operation=op,
-                                     freq_range=(30,3300),)
-
-        out_creatures.append(out_creature)
-    return out_creatures
 
 def pick_a_parent(creature, gene_pool):
     return creature.copulate(gene_pool)
 
 def rubber_stamper(creatures, age=3):
-
     for c in creatures:
         index = creatures.index(c)
         for w in c.voice.waves:
@@ -163,10 +138,31 @@ def rubber_stamper(creatures, age=3):
         c.voice.write_to_wav(out_path, length=10)
 
 class Generation:
-    def __init__(self,creatures, era, no_of_creatures):
+    def __init__(self,creatures, era, no_of_creatures=30):
         self.era = era
         self.creatures = []
+        self.no_of_creatures = no_of_creatures
+    
+    def make_generation(self,
+                        waves_per_voice=30,
+                        wav_length=5):
 
+        """Returns a list of creatures, each with its own voice."""
+        out_creatures = []
+        out_creature = Creature()
+
+        for i in range(no_of_creatures):
+            out_creature = Creature()
+            print "Building creature", i
+
+            #To be removed - operations to become attributes of waves. 
+            opl=possible_operations.append("any")
+            op=[random.randint(0,len(possible_operations))]
+
+            out_creature.voice.make_voice()
+            out_creatures.append(out_creature)
+        
+        return out_creatures
 
 
 def main():
