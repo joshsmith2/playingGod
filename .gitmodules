@@ -1,3 +1,6 @@
 [submodule "wavebender"]
 	path = wavebender
 	url = https://github.com/zacharydenton/wavebender.git
+[submodule "freqtools"]
+	path = freqtools
+	url = git@github.com:joshsmith2/freqtools.git

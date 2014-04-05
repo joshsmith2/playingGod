@@ -6,3 +6,4 @@ samples/*
 wavebender
 *.wav
 *.pyc
+wavegen/*.pyc
