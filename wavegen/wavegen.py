@@ -8,7 +8,6 @@ import wavebender as wb
 import sys
 import matplotlib.pyplot as plot
 import inspect 
-from itertools import *
 from numpy import absolute
 import random
 from pprint import pprint
@@ -29,6 +28,25 @@ def zeroes():
     """
     while True: 
         yield 0
+
+def print_vars(obj):
+    pprint(variables(obj))
+
+def variables(self):
+    """Returns the defined variables of an selfect wave as a dictionary
+    
+    Particularly designed for waves / voices."""
+    members = inspect.getmembers(self)
+    out_dict = {}
+    
+    for member in members:
+        m_name = member[0]
+        m_value = member[1]
+        if not '__' in m_name:
+            if not inspect.ismethod(m_value) and not inspect.isgenerator(m_value):
+                if m_name != 'waves' and m_name != 'samples':
+                    out_dict[m_name] = m_value
+    return out_dict
 
 def calculate(i,j,operation):
     """Merge i and j according to operation, return a float.
@@ -96,7 +114,7 @@ class Voice:
     Can be written to file.
    
     sample_rate: int (Hz) - default: 44000
-        Determines how many times per second the wave will be sampled to
+        Determines how many lengths per second the wave will be sampled to
         produce sound. 
 
     channels: int - default 2
@@ -148,7 +166,7 @@ class Voice:
     def make_voice(self, 
                    active_waves_range=None, 
                    length_range=(0,60),
-                   freq_range=(30,4000),
+                   freq_range=(2,6000),
                    amp_range=(0.01,0.99),
                    prewait_range=(0,88000),
                    postwait_range=(0,88000),
@@ -260,6 +278,11 @@ class Voice:
         location: path
             Where the file should be written to. Default is current working dir.
         """
+
+        ext = ".wav"
+        if name[:-len(ext)] != ext:
+            name = str(name) + ".wav"
+
         #Generate a finite list of samples from our points generator
         no_of_samples = length * self.sample_rate
         self.samples = []
@@ -280,28 +303,10 @@ class Voice:
                           framerate=self.sample_rate)
 
 
-    def variables(self):
-        """Returns the defined variables of an selfect wave as a dictionary
-        
-        Particularly designed for waves / voices."""
-        members = inspect.getmembers(self)
-        out_dict = {}
-        
-        for member in members:
-            m_name = member[0]
-            m_value = member[1]
-            if not '__' in m_name:
-                if not inspect.ismethod(m_value) and not inspect.isgenerator(m_value):
-                    if m_name != 'waves':
-                        out_dict[m_name] = m_value
-        return out_dict
-
-    def print_vars(self):
-        pprint(self.variables())
 
 class Wave(Voice):    
 
-    def __init__(self,frequency,time,
+    def __init__(self,frequency,length,
                  amplitude=0.5, 
                  sample_rate=44000,
                  prewait=0, 
@@ -317,9 +322,9 @@ class Wave(Voice):
         self.frequency = frequency
         self.prewait = prewait
         self.postwait = postwait
-        self.time = time
+        self.length = length
         self.sample_rate = sample_rate
-        self.total_ticks = (sample_rate * time) + prewait + postwait
+        self.total_ticks = (sample_rate * length) + prewait + postwait
         self.amplitude = amplitude
         self.phase = phase
         self.norm = norm
