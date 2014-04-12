@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+debug=True
+
 """generation_game.py
 
 The tools to create and manipulate generations of Voices - soon, creatures."""
@@ -8,77 +10,139 @@ from wavegen import *
 from freqtools import *
 import random
 import os
+import pprint
+
+def choose_partners(all_creatures, no_of_partners):
+    """Select no_of_partners partners from all_creatures to mate with. 
+    Returns a list of creatures.
+    
+    all_creatures: list of Creatures
+        The creatures to pick from. Usually every creature in the
+        current generation.
+    no_of_partners: int
+    """
+    partners = []
+    
+    creatures_sorted = sorted(all_creatures, key=lambda x: x.fitness, reverse=True)
+    gene_pool = creatures_sorted #The list from which our partners will be chosen 
+
+    if no_of_partners > len(all_creatures):
+        print "Attempted to mate with ", no_of_partners, " creatures."
+        print "Only", len(all_creatures), " exist"
+        no_of_partners = random.randint(1,len(all_creatures))
+        print "Rerolling. New no. of partners = " + str(no_of_partners)
+
+    for n in range(no_of_partners):
+        fitness_list = [c.fitness for c in gene_pool]
+        chosen_index = weighted_choice(fitness_list)
+        chosen_creature = gene_pool[chosen_index]
+        partners.append(chosen_creature)
+        gene_pool.remove(chosen_creature)
+
+    return partners
+
+def weighted_choice(weights):
+    """Return an index given a sorted list of weights. 
+    Thanks go to Eli Bendersky for this function.
+    (http://eli.thegreenplace.net/2010/01/22/weighted-rand m-generation-in-python/
+    """
+    rnd = random.random() * sum(weights)
+    for i, w in enumerate(weights):
+        rnd -= w
+        if rnd < 0:
+            return i
+
 
 class Creature:
-    """An object which can be evolved.
+    """An object which can be evolved."""
 
-    voice: Voice
-        The creature's voice
-    no_of_partners: int
-        How many other creatures this one mates with when it copulates.
-    x_points:
-        Number of crossover points to be used while copulating
-    """
+    def __init__(self, 
+                 no_of_partners=None, 
+                 no_of_x_points=None, 
+                 fitness=0, 
+                 generation=0):
+        """
 
-    def __init__(self, voice=None, no_of_partners=1, x_points=1):
+        :param no_of_partners: int:
+            How many other creatures this one mates with when it copulates.
+        :param no_of_x_points: int:
+            Number of crossover points to be used while copulating
+        :param fitness: float:
+            The creature's fitness, determining evolutionary strength.
+        :param generation:
+            Which generation the creature belongs to.
+        """
         self.no_of_partners = no_of_partners
-        if voice:
-            self.voice = voice
-        else:
-            self.voice = Voice()
-        self.no_of_x_points = x_points
+        self.voice = Voice()
+        self.voice.make_voice()
+        self.no_of_x_points = no_of_x_points
+        self.fitness = fitness
+        self.generation = generation
+        self.no_of_x_points = no_of_x_points
+        self.no_of_partners = no_of_partners
 
-    def make_creature(self,
-                      max_no_of_partners = (1,30),
-                      no_of_x_points = None,
-                      ):
-        """Constructs a creature with attributes randomly chosen from
-        the ranges passed"""
-        self.max_no_of_partners = random.randint(max_no_of_partners[0],
-                                                 max_no_of_partners[1])
-
-    def copulate(self, voices_to_combine,
+    def copulate(self, possible_partners,
                  mut_rate=0.05,
-                 attributes=['frequency','time','prewait','postwait'],
+                 attributes=['frequency','length','prewait','postwait'],
                  waves_per_voice=30,
                  ):
         """Mixes the attributes of alpha with that of each voice in other.
-        Returns a new voice.
+        Returns a new creature.
 
-        voices_to_combine: list of Voices
+        :type possible_partners: object
+        :param possible_partners: 
+        :param mut_rate: 
+        :param attributes: 
+        :param waves_per_voice: 
+        possible_partners: list of Creatures
             The pool from which to pick the partners. Should not contain self.
         mut_rate: float
             The likelihood that a given value will mutate. Not used yet.
         attributes: list of str
-            The attributes which can be changed during copulation
+            The Voice attributes which can be changed during copulation
         """
-        #Pick crossover points
+        point_index = 0
+        out = Creature()
+
+        #No self love
+        if self in possible_partners:
+            possible_partners.remove(self)
+
         possible_points = waves_per_voice * len(attributes)
+
+        #Generate x_points and no_of_partners for self if not already present.
+        if not self.no_of_partners:
+            self.no_of_partners = random.randint(0, len(possible_partners))
+        if not self.no_of_x_points:
+            self.no_of_x_points = random.randint(0, possible_points - 1)
+
         x_points = random.sample(range(possible_points), self.no_of_x_points)
 
-        point_index = 0
-
-        out = self
-
         #Choose the voices who will pass on their genes this time...
-        fertile_list = random.sample(voices_to_combine, self.no_of_partners)
-        fertile_list.append(self)
-        fertile_voices = [f.voice for f in fertile_list]
+        fertile_creatures = choose_partners(possible_partners, self.no_of_partners)
+        fertile_creatures.append(self)
 
         #...and the one to be written first.
-        dominant_voice = random.sample(fertile_voices, 1)[0]
+        dominant_creature = random.sample(fertile_creatures, 1)[0]
 
-        waves = self.voice.waves
-        for wave in waves:
-            wave_index = waves.index(wave)
+        #Inherit wave attributes
+        for i, wave in enumerate(out.voice.waves):
             for attr in attributes:
                 if point_index in x_points:
-                    dominant_voice = random.sample(fertile_voices, 1)[0]
-                set_value = getattr(dominant_voice.waves[wave_index], attr)
-                setattr(out.voice.waves[wave_index], attr, set_value)
+                    dominant_creature = random.sample(fertile_creatures, 1)[0]
+                set_value = getattr(dominant_creature.voice.waves[i], attr)
+                setattr(out.voice.waves[i], attr, set_value)
+                point_index += 1
 
+        #And others
+        partners_parent = choose_partners(fertile_creatures,1)[0]
+        out.no_of_partners = partners_parent.no_of_partners
+        x_points_parent = choose_partners(fertile_creatures,1)[0]
+        out.no_of_x_points = x_points_parent.no_of_x_points
+
+        out.generation = self.generation + 1
+        out.voice.points = merge(out.voice.waves)
         return out
-
 
 def check_limits(name, value):
     """
