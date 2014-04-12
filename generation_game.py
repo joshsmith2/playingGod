@@ -27,7 +27,8 @@ def choose_partners(all_creatures, no_of_partners):
     gene_pool = creatures_sorted #The list from which our partners will be chosen 
 
     if no_of_partners > len(all_creatures):
-        print "Sorry, you can't mate with more creatures than exist."
+        print "Attempted to mate with ", no_of_partners, " creatures."
+        print "Only", len(all_creatures), " exist"
         no_of_partners = random.randint(1,len(all_creatures))
         print "Rerolling. New no. of partners = " + str(no_of_partners)
 
@@ -53,21 +54,24 @@ def weighted_choice(weights):
 
 
 class Creature:
-    """An object which can be evolved.
-
-    voice: Voice
-        The creature's voice
-    no_of_partners: int
-        How many other creatures this one mates with when it copulates.
-    x_points:
-        Number of crossover points to be used while copulating
-    """
+    """An object which can be evolved."""
 
     def __init__(self, 
                  no_of_partners=None, 
                  no_of_x_points=None, 
                  fitness=0, 
                  generation=0):
+        """
+
+        :param no_of_partners: int:
+            How many other creatures this one mates with when it copulates.
+        :param no_of_x_points: int:
+            Number of crossover points to be used while copulating
+        :param fitness: float:
+            The creature's fitness, determining evolutionary strength.
+        :param generation:
+            Which generation the creature belongs to.
+        """
         self.no_of_partners = no_of_partners
         self.voice = Voice()
         self.voice.make_voice()
@@ -79,7 +83,7 @@ class Creature:
 
     def copulate(self, possible_partners,
                  mut_rate=0.05,
-                 attributes=['frequency','time','prewait','postwait'],
+                 attributes=['frequency','length','prewait','postwait'],
                  waves_per_voice=30,
                  ):
         """Mixes the attributes of alpha with that of each voice in other.
@@ -98,21 +102,21 @@ class Creature:
             The Voice attributes which can be changed during copulation
         """
         point_index = 0
-        out = self
+        out = Creature()
 
         #No self love
         if self in possible_partners:
             possible_partners.remove(self)
 
-        #Pick crossover points
         possible_points = waves_per_voice * len(attributes)
-        x_points = random.sample(range(possible_points), self.no_of_x_points)
 
         #Generate x_points and no_of_partners for self if not already present.
         if not self.no_of_partners:
-            self.no_of_partners = random.randint(possible_partners)
+            self.no_of_partners = random.randint(0, len(possible_partners))
         if not self.no_of_x_points:
-            self.no_of_x_points = random.randint(possible_points - 1)
+            self.no_of_x_points = random.randint(0, possible_points - 1)
+
+        x_points = random.sample(range(possible_points), self.no_of_x_points)
 
         #Choose the voices who will pass on their genes this time...
         fertile_creatures = choose_partners(possible_partners, self.no_of_partners)
@@ -121,6 +125,7 @@ class Creature:
         #...and the one to be written first.
         dominant_creature = random.sample(fertile_creatures, 1)[0]
 
+        #Inherit wave attributes
         for i, wave in enumerate(out.voice.waves):
             for attr in attributes:
                 if point_index in x_points:
@@ -129,7 +134,14 @@ class Creature:
                 setattr(out.voice.waves[i], attr, set_value)
                 point_index += 1
 
+        #And others
+        partners_parent = choose_partners(fertile_creatures,1)[0]
+        out.no_of_partners = partners_parent.no_of_partners
+        x_points_parent = choose_partners(fertile_creatures,1)[0]
+        out.no_of_x_points = x_points_parent.no_of_x_points
+
         out.generation = self.generation + 1
+        out.voice.points = merge(out.voice.waves)
         return out
 
 def check_limits(name, value):
