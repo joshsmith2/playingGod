@@ -13,14 +13,14 @@ for i in range(5):
 def write_c(crets):
     for i,c in enumerate(crets):
         print "Writing " + str(i) + " with " + str(c.voice.no_of_active_waves) + " active waves"
-        c.voice.write_to_wav("samples/Evo2/gen-"+ str(c.generation) + "-creature-" + str(i+1) + ".wav", 7)
+        #c.voice.write_to_wav("samples/Evo2/gen-"+ str(c.generation) + "-creature-" + str(i+1) + ".wav", 7)
 
 write_c(gen)
 
 the_gen = gen
 
 while True:
-    [print_vars(c) for c in gen]
+    #[print_vars(c) for c in gen]
 
     for i,g in enumerate(the_gen):
         g.fitness = int(ri("Fitness of creature " + str(i+1) + "?"))
