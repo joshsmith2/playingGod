@@ -113,11 +113,11 @@ class Voice:
 
     Can be written to file.
 
-    sample_rate: int (Hz) - default: 44000
+    sample_rate: int (Hz) - default: 44100
         Determines how many lengths per second the wave will be sampled to
         produce sound.
 
-    channels: int - default 2
+    channels: int - default 1
         No of channels. Still not sure what this means but it's in wavebender.
 
     generation: int - default 0
@@ -129,8 +129,8 @@ class Voice:
 
     """
     def __init__(self,
-                 sample_rate=44000,
-                 channels=2,
+                 sample_rate=44100,
+                 channels=1,
                  generation=0,
                  no_of_waves=30,
                  no_of_active_waves=10):
@@ -308,7 +308,7 @@ class Wave(Voice):
 
     def __init__(self,frequency,length,
                  amplitude=0.5,
-                 sample_rate=44000,
+                 sample_rate=44100,
                  prewait=0,
                  postwait=0,
                  shape='sine',

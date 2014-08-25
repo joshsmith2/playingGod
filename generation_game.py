@@ -74,7 +74,7 @@ def choose_partners(all_creatures, no_of_partners):
 def weighted_choice(weights):
     """Return an index given a sorted list of weights. 
     Thanks go to Eli Bendersky for this function.
-    (http://eli.thegreenplace.net/2010/01/22/weighted-rand m-generation-in-python/
+    http://eli.thegreenplace.net/2010/01/22/weighted-rand m-generation-in-python/
     """
     rnd = random.random() * sum(weights)
     for i, w in enumerate(weights):
@@ -180,7 +180,7 @@ class Creature:
     def mutate(self,
                creature_params_and_limits,
                wave_params,
-               mutation_coefficient=520,
+               mutation_coefficient=800,
                verbose=False
     ):
         """

@@ -12,8 +12,8 @@ for i in range(5):
 
 def write_c(crets):
     for i,c in enumerate(crets):
-        print "Writing " + str(i) + " with " + str(c.voice.no_of_active_waves) + " active waves"
-        #c.voice.write_to_wav("samples/Evo2/gen-"+ str(c.generation) + "-creature-" + str(i+1) + ".wav", 7)
+        print "Writing " + str(i + 1) + " with " + str(c.voice.no_of_active_waves) + " active waves"
+        c.voice.write_to_wav("samples/fishface/gen-"+ str(c.generation) + "-creature-" + str(i+1) + ".wav", 7)
 
 write_c(gen)
 
